@@ -1,0 +1,392 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#22384f">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Дизтопливо">
+<script src="https://telegram.org/js/telegram-web-app.js?64" async></script>
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>Расход дизтоплива</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+/* Layout: one column, phone first; result bar sticks to the bottom until the page end */
+:root{
+  --bg:#eef1f4; --surface:#ffffff; --sunk:#e3e8ee; --line:#cfd6de;
+  --fg:#16202b; --muted:#5b6876; --accent:#d9861a; --accent-ink:#1b1305;
+  --steel:#22384f; --steel-ink:#f2f5f8; --warn:#b4471f; --changed:#fbe3b8;
+  --f-body:"Golos Text",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --f-num:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#10161d; --surface:#18212b; --sunk:#0c1117; --line:#2b3744;
+  --fg:#e7ecf1; --muted:#93a2b1; --accent:#f0a33a; --accent-ink:#1b1305;
+  --steel:#1f3247; --steel-ink:#eef2f6; --warn:#ef8a5f; --changed:#5a4210; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#10161d; --surface:#18212b; --sunk:#0c1117; --line:#2b3744;
+  --fg:#e7ecf1; --muted:#93a2b1; --accent:#f0a33a; --accent-ink:#1b1305;
+  --steel:#1f3247; --steel-ink:#eef2f6; --warn:#ef8a5f; --changed:#5a4210; color-scheme:dark}
+*{box-sizing:border-box}
+html{scroll-padding-top:12px;scroll-padding-bottom:96px}
+html,body{background:var(--bg)}
+body{color:var(--fg);font-family:var(--f-body);font-size:16px;line-height:1.4;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-bottom:24px}
+.wrap{max-width:560px;margin:0 auto;padding-block:14px 8px;display:flex;flex-direction:column;gap:14px}
+.page{display:flex;flex-direction:column;gap:14px;min-width:0}
+.page>*{min-width:0;max-width:100%}
+header h1{margin:0;font-size:20px;font-weight:700;letter-spacing:-.01em;text-wrap:balance}
+.num{font-family:var(--f-num);font-variant-numeric:tabular-nums}
+.lbl,label.f>span{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.lbl{margin:0 0 6px}
+label.f{display:flex;flex-direction:column;gap:5px;min-width:0}
+input,select{font:inherit;color:var(--fg);background:var(--surface);border:1.5px solid var(--line);border-radius:10px;padding:12px;width:100%;min-width:0}
+input.num{font-family:var(--f-num);font-size:20px}
+input:focus-visible,select:focus-visible,button:focus-visible,a:focus-visible,summary:focus-visible{outline:2.5px solid var(--accent);outline-offset:1px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.dirs{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+@media (max-width:360px){.dirs{grid-template-columns:repeat(2,1fr)}}
+.dir{font:inherit;font-size:14px;font-weight:600;padding:10px 4px;border-radius:9px;border:1.5px solid var(--line);background:var(--surface);color:var(--fg);cursor:pointer;min-width:0;
+  display:flex;align-items:center;justify-content:center;gap:5px;white-space:nowrap;overflow:hidden}
+.dir i{font-style:normal;opacity:.6}
+.dir[aria-pressed="true"]{background:var(--steel);color:var(--steel-ink);border-color:var(--steel)}
+.dir[aria-pressed="true"] i{opacity:1;color:var(--accent);font-size:17px}
+.leg{display:flex;flex-direction:column;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px}
+.vias{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.vias span{font-size:13px;color:var(--muted);flex-basis:100%}
+.via{font:inherit;font-size:14px;padding:8px 12px;border-radius:999px;border:1.5px solid var(--line);background:var(--surface);color:var(--fg);cursor:pointer}
+.via[aria-pressed="true"]{border-color:var(--accent);background:var(--changed)}
+.result{background:var(--steel);color:var(--steel-ink);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:10px;scroll-margin-top:12px}
+.result.flash{outline:3px solid var(--accent);outline-offset:2px}
+.result .big{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.result .big b{font-family:var(--f-num);font-size:44px;line-height:1;font-weight:600;color:var(--accent)}
+.result .big span{font-size:18px;opacity:.85}
+.result .rows{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:14px;margin:0}
+.result .rows dt{opacity:.75}
+.result .rows dd{margin:0;text-align:right;font-family:var(--f-num)}
+.result .rows dd small{display:block;opacity:.72;font-family:var(--f-body);font-size:12.5px;margin-top:2px}
+.result .hint{font-size:14px;opacity:.9}
+.result .hint.w{color:var(--accent);opacity:1;font-weight:600}
+.btn{font:inherit;font-weight:600;border-radius:10px;padding:13px 16px;border:1.5px solid var(--line);background:var(--surface);color:var(--fg);cursor:pointer}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.res{background:var(--steel);border-color:var(--steel);color:var(--steel-ink);font-size:17px;padding:15px;
+  position:sticky;bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:5;box-shadow:0 6px 18px rgba(10,20,30,.28);font-variant-numeric:tabular-nums}
+.btn:disabled{opacity:.45;cursor:default}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.row .btn{flex:1}
+.note{font-size:13px;color:var(--muted)}
+.ndfoot{text-align:center;font-size:14px;color:var(--muted);padding-block:10px 4px;border-top:1px solid var(--line)}
+.ndfoot b{color:var(--fg)}
+.foot{text-align:center}.foot a{color:var(--muted);font-size:14px}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:999px;font-size:14px;z-index:30;max-width:calc(100% - 32px)}
+
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header><h1 id="hTitle">Расход дизтоплива</h1></header>
+
+  <section id="v-calc" class="page">
+    <div class="result" id="result" aria-live="polite" tabindex="-1">
+      <div class="big"><b id="rL">—</b><span>литров</span></div>
+      <dl class="rows" id="rRows"></dl>
+      <div class="hint" id="rHint" hidden></div>
+    </div>
+
+    <div>
+      <p class="lbl">Направление</p>
+      <div class="dirs" id="dirs"></div>
+      <div class="note" id="dirHint" style="margin-top:6px"></div>
+    </div>
+
+    <div class="leg" id="leg">
+      <div class="vias" id="vias" hidden></div>
+      <div class="grid2">
+        <label class="f"><span>Откуда</span><select id="sFrom"></select></label>
+        <label class="f"><span>Куда</span><select id="sTo"></select></label>
+      </div>
+    </div>
+
+    <div class="grid2">
+      <label class="f"><span>Вес поезда, т</span><input id="iW" class="num" inputmode="decimal" enterkeyhint="next" autocomplete="off" placeholder="3550"></label>
+      <label class="f"><span>Оси</span><input id="iA" class="num" inputmode="numeric" enterkeyhint="next" autocomplete="off" placeholder="240"></label>
+      <label class="f"><span>Расстояние, км</span><input id="iK" class="num" inputmode="decimal" enterkeyhint="next" autocomplete="off"></label>
+      <label class="f"><span>Удельный вес</span><input id="iR" class="num" inputmode="decimal" enterkeyhint="done" autocomplete="off" placeholder="0,830"></label>
+    </div>
+    <button class="btn res" id="bRes" type="button">Показать результат</button>
+    <button class="btn" id="bClear" type="button">Очистить</button>
+    <div class="ndfoot">Нормы обновлены: <b id="normDate">—</b></div>
+    
+  </section>
+
+  
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+"use strict";
+const COLS=[5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25];
+const DEFAULT_NORMS={"date": "с 9.04.2026, 18 ч", "rows": [["Гуд-Прох", [74, 63.7, 56.4, 51, 46.9, 43.7, 41, 38.8, 37, 34.9, 33.1, 31.6, 30.2, 29, 27.9, 27, 26.2, 25.6, 25, 24.5, 24]], ["Прох-Гуд", [54, 43.3, 35.7, 30, 26.8, 24.2, 22.2, 20.4, 19, 18.1, 17.4, 16.8, 16.3, 15.8, 15.3, 15, 13.8, 12.7, 11.7, 10.8, 10]], ["Гуд-Арт", [64, 53.7, 46.4, 41, 37.5, 34.7, 32.4, 30.6, 29, 27.5, 26.3, 25.2, 24.2, 23.4, 22.6, 22, 21.5, 21, 20.7, 20.3, 20]], ["Арт-Гуд", [66, 56.2, 49.2, 44, 39.3, 35.6, 32.6, 30.1, 28, 26.8, 25.9, 25, 24.3, 23.6, 23, 22.5, 22, 21.5, 21.2, 20.8, 20.5]], ["К-Юрт-Арт", [64, 53.7, 46.4, 41, 37.5, 34.7, 32.4, 30.6, 29, 27.5, 26.3, 25.2, 24.2, 23.4, 22.6, 22, 21.5, 21, 20.7, 20.3, 20]], ["Арт-К-Юрт", [66, 56.2, 49.2, 44, 39.3, 35.6, 32.6, 30.1, 28, 26.8, 25.9, 25, 24.3, 23.6, 23, 22.5, 22, 21.5, 21.2, 20.8, 20.5]], ["Гуд-Гроз", [150, 132, 120, 111, 104, 98.5, 93.9, 90, 84, 79, 74.6, 70.7, 67.3, 64.3, 61.6, 59.2, 57, 55, 53.2, 51.5, 50]], ["Гроз-Гуд", [121.7, 101, 87.6, 76.9, 68.6, 62, 56.6, 52.1, 48.2, 44.9, 42, 39.5, 37.3, 35.3, 33.5, 31.9, 30.5, 29.2, 28, 26.9, 25]], ["Гуд-Мах", [60, 52, 46.2, 42, 39.1, 36.8, 34.9, 33.3, 32, 29.1, 26.6, 24.5, 22.5, 20.8, 19.3, 18, 16.6, 15.5, 14.4, 13.4, 12.5]], ["Мах-Гуд", [70, 60.2, 53.2, 48, 44.2, 41.2, 38.7, 36.7, 35, 32.5, 30.4, 28.5, 26.9, 25.4, 24.1, 23, 22.2, 21.6, 21, 20.5, 20]], ["Гуд-К-Юрт", [74, 63.7, 56.4, 51, 46.9, 43.7, 41, 38.8, 37, 34.9, 33.1, 31.6, 30.2, 29, 27.9, 27, 25.8, 24.7, 23.7, 22.8, 22]], ["К-Юрт-Гуд", [70, 60.2, 53.2, 48, 44.2, 41.2, 38.7, 36.7, 35, 32.5, 30.4, 28.5, 26.9, 25.4, 24.1, 23, 22.2, 21.6, 21, 20.5, 20]], ["Гуд-Мвод", [69, 59.6, 53, 48, 43.9, 40.7, 38, 35.8, 34, 32.1, 30.5, 29.1, 27.9, 26.8, 25.8, 25, 24.5, 24, 23.7, 23.3, 23]], ["Мвод-Гуд", [54, 43.3, 35.7, 30, 26.8, 24.2, 22.2, 20.4, 19, 18.1, 17.4, 16.8, 16.3, 15.8, 15.3, 15, 13.8, 12.7, 11.7, 10.8, 10]], ["Гуд-Кизляр", [68, 57.7, 50.4, 45, 41.2, 38.2, 35.7, 33.7, 32, 30.3, 28.9, 27.7, 26.6, 25.6, 24.7, 24, 23.5, 23, 22.7, 22.3, 22]], ["Кизляр-Гуд", [80, 70.2, 63.2, 58, 53, 49.1, 45.9, 43.2, 41, 39.3, 37.9, 36.7, 35.6, 34.6, 33.7, 33, 31.4, 30, 28.7, 27.5, 26.5]], ["Мах-Артез", [58, 48.2, 41.2, 36, 32.8, 30.2, 28.2, 26.4, 25, 23.7, 22.7, 21.7, 20.9, 20.2, 19.5, 19, 18.5, 18, 17.7, 17.3, 17]], ["Артез-Мах", [62, 53.1, 46.7, 42, 37.6, 34.2, 31.3, 29, 27, 25.9, 25.1, 24.3, 23.6, 23, 22.4, 22, 21, 20.1, 19.3, 18.6, 18]]]};
+
+/* ---------- схема ходов: участки [станция, км-столб]; G — без столбов (ТР-4) ---------- */
+const LEGS={
+  A:[["Гудермес",182.1],["Гудермес-Западный",178.8],["Червлённая-Узловая",167],["Червлённая",156],["Терек",129],["Наурская",109],["Алпатова",100],["Ишерская",89],["Стодеревская",68],["Осетиновск",60],["Моздок",50],["Луковск",43],["Черноярский",25],["Приближный",9],["Прохладная",1]],
+  B:[["Прохладная",1937],["Шарданово",1927],["Солдатская",1916],["Аполлонская",1896],["Зольская",1887],["Георгиевск",1869],["Виноградная",1858],["Минеральные Воды",1840]],
+  C:[["Гудермес",182.1],["Гудермес-Западный",178.8],["Червлённая-Узловая",167]],
+  D:[["Червлённая-Узловая",0],["Шелковская",30.1],["Каргинская",60.3],["Кизляр",82.7],["Рзд 17",96.3],["Карабаглы",111],["Рзд 15",127],["Кочубей",144],["Рзд 14",160],["Кутан",176],["Рзд 12",192],["Артезиан",207]],
+  E:[["Гудермес",2164],["Кади-Юрт",2179],["Хасавюрт",2203],["Карлан-Юрт",2215],["Блок-пост Сулак",2224]],
+  F:[["Блок-пост Сулак",2224],["Кизилюрт",2227],["Темиргое",2252],["Шамхал",2269],["Махачкала",2282]],
+  G:[["Махачкала",0],["Тарки",11],["Манас",34],["Ачи",42],["Избербаш",62],["Инчхе",72],["Каягент",81],["Берикей",101],["Мамед-Кала",109],["Дагестанские Огни",118],["Дербент",129]],
+  H:[["Кизляр",1],["Качалай",17.5],["Герменчик",37.5],["Куруш",59.5],["Блок-пост Сулак",79]],
+  I:[["Гудермес",2163],["Джалка",2152],["Аргун",2143],["Ханкала",2134],["Грозный",2127]]
+};
+const r1=x=>Math.round(x*10)/10;
+/* ход = цепочка участков [ключ, обратно?, с какой станции]; у каждой станции км от начала хода */
+function chain(parts){
+  const out=[];let off=0;
+  for(const [k,rev,from] of parts){
+    let pts=LEGS[k].slice();if(rev)pts.reverse();
+    if(from)pts=pts.slice(pts.findIndex(p=>p[0]===from));
+    const p0=pts[0][1];
+    pts.forEach(([n,p],i)=>{if(i===0&&out.length)return;out.push({n,d:r1(off+Math.abs(p-p0))})});
+    off=r1(off+Math.abs(pts[pts.length-1][1]-p0));
+  }
+  return out;
+}
+const ROUTES=[
+  chain([["A"],["B"]]),                         // 0 Гудермес — Прохладная — Мин. Воды
+  chain([["E"],["F"],["G"]]),                   // 1 Гудермес — Махачкала — Дербент
+  chain([["I"]]),                               // 2 Гудермес — Грозный
+  chain([["C"],["D"]]),                         // 3 Гудермес — Шелковская — Кизляр — Артезиан
+  chain([["F",1],["H",1],["D",0,"Кизляр"]]),    // 4 Махачкала — Сулак — Кизляр — Артезиан
+  chain([["E"],["H",1],["D",0,"Кизляр"]])       // 5 Гудермес — Сулак — Кизляр — Артезиан
+];
+/* направление из таблицы норм -> где лежит на схеме */
+const DIRS=(()=>{
+  const m={},pair=(a,b,opts)=>{m[a]=opts;m[b]=opts.map(o=>({...o,a:o.b,b:o.a}))};
+  pair("Гуд-Прох","Прох-Гуд",[{via:"",ri:0,a:"Гудермес",b:"Прохладная"}]);
+  pair("Гуд-Мвод","Мвод-Гуд",[{via:"",ri:0,a:"Гудермес",b:"Минеральные Воды"}]);
+  pair("Гуд-Мах","Мах-Гуд",[{via:"",ri:1,a:"Гудермес",b:"Махачкала"}]);
+  pair("Гуд-К-Юрт","К-Юрт-Гуд",[{via:"",ri:1,a:"Гудермес",b:"Кизилюрт"}]);
+  pair("Гуд-Гроз","Гроз-Гуд",[{via:"",ri:2,a:"Гудермес",b:"Грозный"}]);
+  pair("Гуд-Кизляр","Кизляр-Гуд",[{via:"через Шелковскую",ri:3,a:"Гудермес",b:"Кизляр"},{via:"через Сулак",ri:5,a:"Гудермес",b:"Кизляр"}]);
+  pair("Гуд-Арт","Арт-Гуд",[{via:"через Шелковскую",ri:3,a:"Гудермес",b:"Артезиан"},{via:"через Сулак",ri:5,a:"Гудермес",b:"Артезиан"}]);
+  pair("К-Юрт-Арт","Арт-К-Юрт",[{via:"",ri:4,a:"Кизилюрт",b:"Артезиан"}]);
+  pair("Мах-Артез","Артез-Мах",[{via:"",ri:4,a:"Махачкала",b:"Артезиан"}]);
+  return m;
+})();
+/* кнопки туда-обратно: [туда, обратно, А, Б] */
+const PAIRS=[["Гуд-Прох","Прох-Гуд","Гуд","Прох"],["Гуд-Арт","Арт-Гуд","Гуд","Арт"],["К-Юрт-Арт","Арт-К-Юрт","К-Юрт","Арт"],["Гуд-Гроз","Гроз-Гуд","Гуд","Гроз"],["Гуд-Мах","Мах-Гуд","Гуд","Мах"],["Гуд-К-Юрт","К-Юрт-Гуд","Гуд","К-Юрт"],["Гуд-Мвод","Мвод-Гуд","Гуд","Мвод"],["Гуд-Кизляр","Кизляр-Гуд","Гуд","Кизляр"],["Мах-Артез","Артез-Мах","Мах","Артез"]];
+function legStations(o){
+  const st=ROUTES[o.ri],ia=st.findIndex(x=>x.n===o.a),ib=st.findIndex(x=>x.n===o.b);
+  const seg=ia<=ib?st.slice(ia,ib+1):st.slice(ib,ia+1).reverse();
+  const d0=seg[0].d;return seg.map(x=>({n:x.n,d:r1(Math.abs(x.d-d0))}));
+}
+
+/* ---------- мелочи ---------- */
+const $=id=>document.getElementById(id);
+const clone=o=>JSON.parse(JSON.stringify(o));
+const fmt=(n,min=1,max=min)=>Number.isFinite(n)?n.toLocaleString("ru-RU",{minimumFractionDigits:min,maximumFractionDigits:max}):"—";
+const num=s=>{const v=parseFloat(String(s??"").replace(/\s/g,"").replace(",","."));return Number.isFinite(v)?v:NaN};
+const kmStr=x=>String(r1(x)).replace(".",",");
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+let tt;function toast(t){const el=$("toast");el.textContent=t;el.hidden=false;clearTimeout(tt);tt=setTimeout(()=>el.hidden=true,2400)}
+
+/* ---------- состояние этого телефона ---------- */
+const LS="dizel_v1";
+let S={rho:"0,830",dir:"Гуд-Прох",pdir:{},leg:{},w:"",a:"",updatedAt:0};
+function mergeState(o){if(!o||typeof o!=="object")return;Object.assign(S,o);["history","norms","km","touched","via","route"].forEach(k=>delete S[k]);S.pdir=S.pdir||{};S.leg=S.leg||{}}
+try{mergeState(JSON.parse(localStorage.getItem(LS)||"null"))}catch(e){}
+try{localStorage.removeItem(LS+"_photo")}catch(e){}
+
+let haptic=()=>{},hapticTap=()=>{};
+let tgCloud=null,cloudT=null;
+function persist(){
+  S.updatedAt=Date.now();
+  try{localStorage.setItem(LS,JSON.stringify(S))}catch(e){}
+  
+  if(tgCloud){clearTimeout(cloudT);cloudT=setTimeout(()=>{const v=JSON.stringify(S);if(v.length<=4096)try{tgCloud.setItem("state",v,()=>{})}catch(e){}},1000)}
+}
+
+/* ---------- нормы ---------- */
+let N=clone(DEFAULT_NORMS);
+const rowOf=name=>{const r=N.rows.find(r=>r[0]===name);return r?r[1]:null};
+function normalizeNorms(j){
+  if(!j||!Array.isArray(j.rows)||!j.rows.length)return null;
+  const rows=[];
+  for(const r of j.rows){
+    const name=String(Array.isArray(r)?r[0]:(r&&r.name)||"").trim();
+    const v=Array.isArray(r)?r[1]:r&&r.values;
+    if(!name||!Array.isArray(v)||v.length!==COLS.length)return null;
+    rows.push([name,v.map(x=>{const n=num(x);return Number.isFinite(n)?n:null})]);
+  }
+  return {date:String(j.date||""),rows};
+}
+
+/* ---------- расчёт ---------- */
+/* нагрузку округляем до десятых; промежуток между соседними столбцами делим на 10 частей */
+function coefFor(vals,load){
+  const L10=Math.round(load*10+1e-7)/10;
+  if(L10<=COLS[0])return {L10,coef:vals[0],note:L10<COLS[0]?"меньше 5 т — взят столбец 5":"столбец 5",out:L10<COLS[0]};
+  if(L10>=COLS[20])return {L10,coef:vals[20],note:L10>COLS[20]?"больше 25 т — взят столбец 25":"столбец 25",out:L10>COLS[20]};
+  const i=Math.floor(L10+1e-7)-COLS[0],n=Math.round((L10-COLS[i])*10);
+  if(n===0)return {L10,coef:vals[i],note:`столбец ${COLS[i]}`};
+  const step=(vals[i]-vals[i+1])/10;
+  return {L10,coef:vals[i]-step*n,note:`${fmt(vals[i],1)} ${step>=0?"−":"+"} ${n} × ${fmt(Math.abs(step),2,3)}`};
+}
+let kmManual=false;
+function legOf(d){
+  const opts=DIRS[d];if(!opts)return null;
+  const saved=S.leg[d]||{};
+  const v=opts[saved.v]?saved.v:0,st=legStations(opts[v]);
+  let f=st.findIndex(x=>x.n===saved.f),t=st.findIndex(x=>x.n===saved.t);
+  if(f<0||f>st.length-2)f=0;
+  if(t<=f)t=st.length-1;
+  return {opts,v,st,f,t,km:r1(st[t].d-st[f].d)};
+}
+function autoKm(){const g=legOf(S.dir);$("iK").value=g?kmStr(g.km):"";kmManual=false}
+function setLeg(patch){
+  haptic();
+  S.leg[S.dir]={...S.leg[S.dir],...patch};
+  const g=legOf(S.dir);if(g)S.leg[S.dir]={v:g.v,f:g.st[g.f].n,t:g.st[g.t].n};
+  autoKm();persist();renderLeg();calc();
+}
+function fillSel(sel,list,cur){sel.replaceChildren(...list.map(x=>new Option(x.n,x.n)));sel.value=cur}
+function renderLeg(){
+  const g=legOf(S.dir),box=$("vias");
+  $("leg").hidden=!g;if(!g)return;
+  box.replaceChildren();box.hidden=g.opts.length<2;
+  if(g.opts.length>1){
+    const cap=document.createElement("span");cap.textContent="Каким путём едете?";box.append(cap);
+    g.opts.forEach((o,i)=>{const b=document.createElement("button");b.type="button";b.className="via";b.textContent=o.via;
+      b.setAttribute("aria-pressed",String(i===g.v));b.onclick=()=>setLeg({v:i,f:null,t:null});box.append(b)});
+  }
+  fillSel($("sFrom"),g.st.slice(0,-1),g.st[g.f].n);
+  fillSel($("sTo"),g.st.slice(g.f+1),g.st[g.t].n);
+}
+$("sFrom").addEventListener("change",e=>setLeg({f:e.target.value}));
+$("sTo").addEventListener("change",e=>setLeg({t:e.target.value}));
+
+function pickDir(name){haptic();S.dir=name;autoKm();persist();renderDirs();renderLeg();calc()}
+function renderDirs(){
+  const box=$("dirs"),names=N.rows.map(r=>r[0]),used=new Set();box.replaceChildren();
+  const mk=(html,label,on,fn)=>{const b=document.createElement("button");b.type="button";b.className="dir";b.innerHTML=html;
+    b.setAttribute("aria-pressed",String(on));b.setAttribute("aria-label",label);b.onclick=fn;box.append(b)};
+  let paired=false;
+  for(const [f,r,A,B] of PAIRS){
+    const hasF=names.includes(f),hasR=names.includes(r);if(!hasF&&!hasR)continue;
+    used.add(f);used.add(r);
+    const on=S.dir===f||S.dir===r,both=hasF&&hasR;
+    const back=on?S.dir===r:(!hasF||(hasR&&S.pdir[f]===1));
+    const from=back?B:A,to=back?A:B;
+    if(on&&both)paired=true;
+    mk(`<span>${from}</span><i aria-hidden="true">${on&&both?"⇄":"→"}</i><span>${to}</span>`,`${from} — ${to}`+(on&&both?", нажмите, чтобы развернуть":""),on,()=>{
+      if(!on){pickDir(back?r:f);return}
+      if(!both)return;
+      S.pdir[f]=back?0:1;pickDir(back?f:r);
+    });
+  }
+  names.filter(n=>!used.has(n)).forEach(n=>mk(`<span>${esc(n)}</span>`,n,S.dir===n,()=>pickDir(n)));
+  $("dirHint").textContent=paired?"Нажмите на выбранное направление ещё раз, чтобы развернуть.":"";
+}
+function calc(){
+  const w=num($("iW").value),a=num($("iA").value),k=num($("iK").value),r=num($("iR").value),vals=rowOf(S.dir);
+  const rows=$("rRows");rows.replaceChildren();
+  const add=(t,v)=>rows.insertAdjacentHTML("beforeend",`<dt>${t}</dt><dd>${v}</dd>`);
+  let msg="",warn="",liters=null;
+  if(!vals)msg="Выберите направление.";
+  else if(!(w>0)||!(a>0))msg="Введите вес поезда и количество осей.";
+  else{
+    const load=w/a,c=coefFor(vals,load);
+    add("Нагрузка на ось",fmt(load,2)+" т"+(Math.abs(c.L10-load)>1e-9?" → "+fmt(c.L10,1):""));
+    add("Коэффициент",fmt(c.coef,2,3)+`<small>${c.note}</small>`);
+    if(c.out)warn="Нагрузка на ось вне таблицы 5–25 т. Проверьте вес и оси.";
+    if(!(k>0))msg="Введите расстояние в км.";
+    else if(!(r>0))msg="Введите удельный вес топлива.";
+    else{
+      const kg=c.coef*w*k/10000;liters=kg/r;
+      add("Килограммы",fmt(kg,1)+" кг");
+      if(r<0.7||r>0.95)warn="Удельный вес обычно около 0,830–0,840. Проверьте цифру.";
+    }
+  }
+  $("rL").textContent=liters===null?"—":fmt(liters,1);
+  const h=$("rHint");h.hidden=!(msg||warn);h.textContent=msg||warn;h.classList.toggle("w",!msg&&!!warn);
+  $("bRes").textContent=liters===null?"Показать результат":`Результат: ${fmt(liters,1)} л`;
+}
+function showResult(){
+  hapticTap();
+  if(document.activeElement&&document.activeElement.blur)document.activeElement.blur();
+  calc();const res=$("result");
+  setTimeout(()=>{res.scrollIntoView({behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth",block:"start"});
+    res.classList.add("flash");setTimeout(()=>res.classList.remove("flash"),900)},120);
+}
+for(const id of ["iW","iA","iK","iR"]){
+  const el=$(id);
+  el.addEventListener("input",()=>{
+    if(id==="iW")S.w=el.value;else if(id==="iA")S.a=el.value;else if(id==="iR")S.rho=el.value;else kmManual=true;
+    persist();calc();
+  });
+  el.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();showResult()}});
+}
+$("bRes").onclick=showResult;
+$("bClear").onclick=()=>{$("iW").value="";$("iA").value="";S.w="";S.a="";autoKm();persist();calc();$("iW").focus()};
+function loadInputs(){$("iW").value=S.w||"";$("iA").value=S.a||"";$("iR").value=S.rho||""}
+function renderCalc(){
+  if(!rowOf(S.dir))S.dir=N.rows[0][0];
+  renderDirs();renderLeg();if(!kmManual)autoKm();calc();
+  $("normDate").textContent=N.date||"—";
+}
+function setNorms(n){N=n;renderCalc();}
+
+
+
+/* ---------- страницы ---------- */
+
+
+const PAGE="calc";
+function route(){
+  const adm=PAGE==="admin";
+  $("v-calc").hidden=adm;
+  
+  $("hTitle").textContent=adm?"Нормы":"Расход дизтоплива";
+}
+
+
+/* ---------- запуск ---------- */
+loadInputs();renderCalc();route();
+
+fetch("norms.json?v="+Date.now(),{cache:"no-store"}).then(r=>r.ok?r.json():null).then(j=>{const n=normalizeNorms(j);if(n)setNorms(n)}).catch(()=>{});
+/* внутри Telegram: тема Telegram, во весь экран, настройки в облаке Telegram */
+function tgInit(){
+  const tg=window.Telegram&&window.Telegram.WebApp;
+  if(!tg||!tg.platform||tg.platform==="unknown")return;
+  const at=v=>{try{return tg.isVersionAtLeast(v)}catch(e){return false}};
+  const hex=c=>{const m=String(c).match(/\d+/g);return m?"#"+m.slice(0,3).map(x=>(+x).toString(16).padStart(2,"0")).join(""):"#eef1f4"};
+  const theme=()=>{
+    document.documentElement.dataset.theme=tg.colorScheme==="dark"?"dark":"light";
+    if(at("6.9")){const bg=hex(getComputedStyle(document.body).backgroundColor);try{tg.setHeaderColor(bg);tg.setBackgroundColor(bg);if(at("7.10"))tg.setBottomBarColor(bg)}catch(e){}}
+  };
+  theme();try{tg.onEvent("themeChanged",theme)}catch(e){}
+  try{tg.ready();tg.expand();if(at("7.7"))tg.disableVerticalSwipes()}catch(e){}
+  if(at("6.1")&&tg.HapticFeedback){haptic=()=>{try{tg.HapticFeedback.selectionChanged()}catch(e){}};hapticTap=()=>{try{tg.HapticFeedback.impactOccurred("light")}catch(e){}}}
+  if(at("6.9")&&tg.CloudStorage){
+    try{tg.CloudStorage.getItem("state",(err,val)=>{
+      if(!err&&val){try{const o=JSON.parse(val);if(o&&o.updatedAt>S.updatedAt){mergeState(o);try{localStorage.setItem(LS,JSON.stringify(S))}catch(e){}loadInputs();kmManual=false;renderCalc()}}catch(e){}}
+      tgCloud=tg.CloudStorage;if(S.updatedAt&&(!val||err))persist();
+    })}catch(e){}
+  }
+}
+if(document.readyState==="complete")tgInit();else window.addEventListener("load",tgInit);
+if("serviceWorker" in navigator&&(location.protocol==="https:"||location.hostname==="localhost"))navigator.serviceWorker.register("sw.js").catch(()=>{});
+
+
+</script>
+</body>
+</html>

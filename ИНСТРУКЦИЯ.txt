@@ -1,0 +1,57 @@
+РАСХОД ДИЗТОПЛИВА — САЙТ
+
+Файлы:
+  index.html            — калькулятор (его открывают все)
+  admin.html            — страница норм для администратора (ссылки на неё на сайте нет)
+  norms.json            — нормы, по ним считает калькулятор
+  sw.js, manifest.webmanifest, icon-*.png, apple-touch-icon.png — работа без интернета и значок на экране
+  .nojekyll             — служебный файл для GitHub Pages (не удалять)
+
+КАК ВЫЛОЖИТЬ (GitHub Pages, бесплатно)
+1. Зарегистрируйтесь на github.com.
+2. Создайте репозиторий: «+» → New repository, имя, например, dizel, тип Public → Create repository.
+3. «uploading an existing file» (или Add file → Upload files) → перетащите ВСЕ файлы из этой папки → Commit changes.
+   Файл .nojekyll может быть скрыт в папке — включите показ скрытых файлов или создайте его на GitHub:
+   Add file → Create new file → имя .nojekyll → Commit.
+4. Settings → Pages → Source: Deploy from a branch, Branch: main, папка / (root) → Save.
+5. Через 1–2 минуты сайт откроется по адресу https://ИМЯ.github.io/dizel/
+   Страница норм: https://ИМЯ.github.io/dizel/admin.html
+
+КАК ОБНОВЛЯТЬ НОРМЫ
+Вариант А — прямо с сайта (удобно с телефона):
+1. Один раз создайте ключ: github.com → Settings → Developer settings → Personal access tokens →
+   Fine-grained tokens → Generate new token. Repository access: Only select repositories → dizel.
+   Permissions → Repository permissions → Contents: Read and write. Срок — до года. Скопируйте ключ.
+2. Откройте admin.html → «Публикация на сайт» → впишите ИМЯ/dizel и ключ → «Проверить и запомнить».
+   Ключ хранится только в этом браузере.
+3. Дальше: «Загрузить таблицу норм» → проверить цифры → «Опубликовать нормы».
+   Через 1–2 минуты новые нормы появятся у всех.
+
+Вариант Б — без ключа:
+1. admin.html → «Загрузить таблицу норм» → проверить → «Сохранить файл norms.json».
+2. На GitHub в репозитории: Add file → Upload files → загрузите norms.json (заменит старый) → Commit changes.
+
+Чужие люди нормы не поменяют: даже открыв admin.html, они могут только скачать файл себе.
+Заменить norms.json на сайте может только владелец репозитория (или тот, у кого есть ключ).
+
+TELEGRAM: КАЛЬКУЛЯТОР ВНУТРИ БОТА (сервер не нужен)
+Сначала выложите сайт (см. выше): для Telegram нужен адрес https://…
+1. Откройте @BotFather → /newbot → имя «Расход дизтоплива» → короткое имя, оканчивается на bot,
+   например dizel_gud_bot. Ключ (token), который пришлёт BotFather, никому не отправляйте.
+2. Кнопка в чате: /mybots → ваш бот → Bot Settings → Menu Button → Configure menu button →
+   пришлите адрес сайта https://ИМЯ.github.io/dizel/ → название кнопки: Калькулятор.
+3. Кнопка «Открыть» в профиле бота: /mybots → ваш бот → Bot Settings → Configure Mini App →
+   Enable Mini App → пришлите тот же адрес.
+4. Оформление: /setuserpic → картинка icon-512.png;
+   /setdescription → «Калькулятор расхода дизтоплива для грузовых и хоз. поездов. Нажмите «Калькулятор» внизу.»;
+   /setabouttext → «Расход дизтоплива по нормам: вес, оси, станции → литры.»
+5. Ссылка для коллег: https://t.me/dizel_gud_bot?startapp — сразу открывает калькулятор.
+В Telegram калькулятор берёт светлую или тёмную тему Telegram, а вес, оси и удельный вес
+хранит в облаке Telegram — они одинаковые на телефоне и на компьютере.
+Нормы те же, что на сайте: после «Опубликовать нормы» они обновятся и в Telegram.
+Страницу норм (admin.html) удобнее открывать в обычном браузере.
+
+ЗНАЧОК НА ЭКРАН ТЕЛЕФОНА
+iPhone: Safari → «Поделиться» → «На экран Домой».
+Android: Chrome → меню ⋮ → «Добавить на главный экран».
+После первого открытия калькулятор работает и без интернета (с последними загруженными нормами).
